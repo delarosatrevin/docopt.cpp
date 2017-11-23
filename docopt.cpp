@@ -350,6 +350,7 @@ static PatternList parse_atom(Tokens& tokens, std::vector<Option>& options)
 	// atom ::= '(' expr ')' | '[' expr ']' | 'options'
 	//             | long | shorts | argument | command ;
 
+
 	std::string const& token = tokens.current();
 
 	PatternList ret;
@@ -382,7 +383,11 @@ static PatternList parse_atom(Tokens& tokens, std::vector<Option>& options)
 	} else if (starts_with(token, "--") && token != "--") {
 		ret = parse_long(tokens, options);
 	} else if (starts_with(token, "-") && token != "-" && token != "--") {
-		ret = parse_short(tokens, options);
+
+		if (!std::isdigit(token[1]))
+			ret = parse_short(tokens, options);
+		else
+			ret.emplace_back(std::make_shared<Argument>(tokens.pop()));
 	} else if (is_argument_spec(token)) {
 		ret.emplace_back(std::make_shared<Argument>(tokens.pop()));
 	} else {
@@ -506,8 +511,13 @@ static PatternList parse_argv(Tokens tokens, std::vector<Option>& options, bool 
 			auto&& parsed = parse_long(tokens, options);
 			std::move(parsed.begin(), parsed.end(), std::back_inserter(ret));
 		} else if (token[0]=='-' && token != "-") {
-			auto&& parsed = parse_short(tokens, options);
-			std::move(parsed.begin(), parsed.end(), std::back_inserter(ret));
+			// In this case it could be a negative number of a short option
+			if (!std::isdigit(token[1])) {
+				auto &&parsed = parse_short(tokens, options);
+				std::move(parsed.begin(), parsed.end(), std::back_inserter(ret));
+			}
+			else
+				ret.emplace_back(std::make_shared<Argument>("", tokens.pop()));
 		} else if (options_first) {
 			// option list is done; convert all the rest to arguments
 			while (tokens) {
