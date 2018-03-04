@@ -20,6 +20,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstddef>
+#include <cctype>
 
 using namespace docopt;
 
